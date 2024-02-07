@@ -27,10 +27,32 @@ attack: copy-scripts create-bad exec
 .PHONY: cluster-up
 cluster-up: kind ## Create the kind cluster
 	-$(KIND) create cluster --name $(CLUSTER_NAME) 
-	
+
 .PHONY: cluster-down
 cluster-down: kind ## Delete the kind cluster
 	-$(KIND) delete cluster --name $(CLUSTER_NAME)
+
+
+.PHONY: redpanda
+redpanda:
+	-$(HELM) repo add jetstack https://charts.jetstack.io
+	-$(HELM) repo update
+	-$(HELM) upgrade --install cert-manager jetstack/cert-manager --set installCRDs=true --namespace cert-manager  --create-namespace
+	- kubectl kustomize "https://github.com/redpanda-data/redpanda-operator//src/go/k8s/config/crd?ref=v2.1.14-23.3.4" \
+    | kubectl apply -f -
+	-$(HELM) repo add redpanda https://charts.redpanda.com
+	-$(HELM) repo update
+	-$(HELM) upgrade --install redpanda-src redpanda/redpanda -n redpanda --create-namespace --set "statefulset.replicas=1" --set "external.enabled=false"
+	- kubectl --namespace redpanda rollout status --watch deployment/redpanda-controller-operator
+
+#export REDPANDA_BROKERS=localhost:19092
+#for i in {1..60}; do echo $(cat /dev/urandom | head -c10 | base64) | rpk topic produce telemetryB; sleep 1; done
+
+.PHONY: fluent 
+fluent:
+	-$(HELM) repo add fluent https://fluent.github.io/helm-charts
+	-$(HELM) repo update
+	-$(HELM) upgrade -- install fluentd fluent/fluentd -n kube-system --create-namespace --values fluentd/values.yaml
 
 
 .PHONY: spyder
