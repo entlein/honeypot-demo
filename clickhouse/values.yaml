@@ -575,7 +575,19 @@ extraVolumeClaimTemplates: []
 ##       - name: portname
 ##         containerPort: 1234
 ##
-sidecars: []
+sidecars: 
+   - name: tabix
+     image: "spoonest/clickhouse-tabix-web-client:latest"
+     imagePullPolicy: Always
+     ports:
+     - containerPort: 80
+     resources:
+       limits:
+         cpu: 125m
+         memory: 128Mi
+       requests:
+         cpu: 125m
+         memory: 128Mi
 ## @param initContainers Add additional init containers to the ClickHouse pod(s)
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 ## e.g:
