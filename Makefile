@@ -48,6 +48,11 @@ redpanda:
 #export REDPANDA_BROKERS=localhost:19092
 #for i in {1..60}; do echo $(cat /dev/urandom | head -c10 | base64) | rpk topic produce telemetryB; sleep 1; done
 
+.PHONY: clickhouse
+clickhouse:
+	-$(HELM) upgrade --install clickhouse -n clickhouse --create-namespace oci://registry-1.docker.io/bitnamicharts/clickhouse --values clickhouse/values.yaml
+
+
 .PHONY: fluent 
 fluent:
 	-$(HELM) repo add fluent https://fluent.github.io/helm-charts

@@ -291,33 +291,67 @@ configMapConfigs: []
 ## Fluentd configurations:
 ##
 fileConfigs:
-  fluentd.conf: |-
-    <source>
-     @type forward
-     port 54321
-     bind 0.0.0.0
-    </source>
+  01_sources.conf: |-
     <source>
       @type tail
-      path /var/run/cilium/tetragon/tetragon.log # 
-      tag tetragon
+      @id in_tail_container_logs
+      @label @KUBERNETES
+      path /var/log/containers/*.log
+      pos_file /var/log/fluentd-containers.log.pos
+      tag kubernetes.*
+      read_from_head true
       <parse>
-        @type json
+        @type multi_format
+        <pattern>
+          format json
+          time_key time
+          time_type string
+          time_format "%Y-%m-%dT%H:%M:%S.%NZ"
+          keep_time_key false
+        </pattern>
+        <pattern>
+          format regexp
+          expression /^(?<time>.+) (?<stream>stdout|stderr)( (.))? (?<log>.*)$/
+          time_format '%Y-%m-%dT%H:%M:%S.%NZ'
+          keep_time_key false
+        </pattern>
       </parse>
+      emit_unmatched_lines true
     </source>
+
+  02_filters.conf: |-
+    <label @KUBERNETES>
+    <match kubernetes.var.log.containers.fluentd**>
+      @type relabel
+      @label @FLUENT_LOG
+    </match>
+
+    <match kubernetes.var.log.containers.redpanda**>
+      @type null
+      @id ignore_redpanda_logs
+    </match>
+    <match kubernetes.var.log.containers.cert-manager**>
+      @type null
+      @id ignore_certmanager_logs
+    </match>
+
+
+    <filter kubernetes.**>
+      @type kubernetes_metadata
+      @id filter_kube_metadata
+      skip_labels false
+      skip_container_metadata false
+      skip_namespace_metadata true
+      skip_master_url true
+    </filter>
+
+    <match **>
+      @type relabel
+      @label @DISPATCH
+    </match>
+    </label>
+
     <label @OUTPUT>
-      # <filter tetragon>
-      #   @type record_transformer
-      #   enable_ruby true
-      #   <record>
-      #     hostname ${hostname}
-      #     pod_name ${record["k8s"]["pod_name"]}
-      #     namespace_name ${record["k8s"]["namespace_name"]}
-      #     container_name ${record["k8s"]["container_name"]}
-      #     labels ${record["k8s"]["labels"]}
-      #     annotations ${record["k8s"]["annotations"]}
-      #   </record>
-      # </filter>
       <match *.**>
         @type kafka2
         brokers redpanda-src.redpanda.svc.cluster.local:9093
@@ -325,7 +359,7 @@ fileConfigs:
         <buffer topic>
           @type file
           path /buffer/td
-          flush_interval 3s
+          flush_interval 1s
         </buffer>
         <format>
           @type json
@@ -336,33 +370,14 @@ fileConfigs:
         compression_codec gzip
       </match>
     </label>
-    # <match *.**>
-    #   @type kafka2
 
-    #   # list of seed brokers
-    #   brokers redpanda-src-0:9092
-    #   use_event_time true
-
-    #   # buffer settings
-    #   <buffer topic>
-    #   @type file
-    #     path /buffer/td
-    #     flush_interval 3s
-    #   </buffer>
-
-    #     # data type settings
-    #   <format>
-    #     @type json
-    #   </format>
-
-    #   # topic settings
-    #   topic_key topic
-    #   default_topic cr1
-
-    #   # producer settings
-    #   required_acks -1
-    #   compression_codec gzip
-    # </match>
+  03_dispatch.conf: |-
+    <label @DISPATCH>
+      <match **>
+        @type relabel
+        @label @OUTPUT
+      </match>
+    </label>
   04_outputs.conf: |-
 
 
