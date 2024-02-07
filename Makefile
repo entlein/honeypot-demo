@@ -41,7 +41,7 @@ redpanda:
 	-$(HELM) repo add redpanda https://charts.redpanda.com
 	-$(HELM) repo update
 	-$(HELM) upgrade --install redpanda-src redpanda/redpanda -n redpanda --create-namespace --values redpanda/values.yaml
-#kubectl exec -it -n redpanda redpanda-src-0 -c redpanda -- /bin/bash 
+    -kubectl exec -it -n redpanda redpanda-src-0 -c redpanda -- /bin/bash -c "rpk topic create cr1"
 # rpk topic create cr1 | echo "hi" | rpk topic produce cr1
 #-watch -n 1 kubectl get all -A -o wide --field-selector=metadata.namespace=redpanda
 

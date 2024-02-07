@@ -26,6 +26,11 @@ Put the traces on
 ```bash
 make traces
 ```
+
+Create redpanda
+```bash
+make redpanda fluent
+```
 Go to second shell for STDOUT observations (dont kill this shell)
 ```bash
 make secondshell-on
