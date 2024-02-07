@@ -41,7 +41,7 @@ redpanda:
 	-$(HELM) repo add redpanda https://charts.redpanda.com
 	-$(HELM) repo update
 	-$(HELM) upgrade --install redpanda-src redpanda/redpanda -n redpanda --create-namespace --values redpanda/values.yaml
-    -kubectl exec -it -n redpanda redpanda-src-0 -c redpanda -- /bin/bash -c "rpk topic create cr1"
+	-kubectl exec -it -n redpanda redpanda-src-0 -c redpanda -- /bin/bash -c "rpk topic create cr1"
 # rpk topic create cr1 | echo "hi" | rpk topic produce cr1
 #-watch -n 1 kubectl get all -A -o wide --field-selector=metadata.namespace=redpanda
 
@@ -81,9 +81,9 @@ tetragon-install: helm
 
 
 .PHONY: vector
+vector:
 	-$(HELM) repo add vector https://helm.vector.dev
-	- wget https://github.com/seifrajhi/tetragon-vector-parseable-blog/blob/main/vector-tetragon-values.yaml
-	-$(HELM) install vector vector/vector --namespace vector --create-namespace --values vector-tetragon-values.yaml
+	-$(HELM) upgrade --install vector vector/vector --namespace vector --create-namespace --values vector/values.yaml
 
 .PHONY: traces
 traces:
