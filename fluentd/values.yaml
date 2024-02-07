@@ -1,0 +1,382 @@
+nameOverride: ""
+fullnameOverride: ""
+
+# DaemonSet, Deployment or StatefulSet
+kind: "DaemonSet"
+# azureblob, cloudwatch, elasticsearch7, elasticsearch8, gcs, graylog , kafka, kafka2, kinesis, opensearch
+variant: kafka2
+# # Only applicable for Deployment or StatefulSet
+# replicaCount: 1
+
+image:
+  repository: "fluent/fluentd-kubernetes-daemonset"
+  pullPolicy: "IfNotPresent"
+  tag: ""
+
+## Optional array of imagePullSecrets containing private registry credentials
+## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: null
+
+rbac:
+  create: true
+
+# from Kubernetes 1.25, PSP is deprecated
+# See: https://kubernetes.io/blog/2022/08/23/kubernetes-v1-25-release/#pod-security-changes
+# We automatically disable PSP if Kubernetes version is 1.25 or higher
+podSecurityPolicy:
+  enabled: true
+  annotations: {}
+
+## Security Context policies for controller pods
+## See https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/ for
+## notes on enabling and using sysctls
+##
+podSecurityContext: {}
+  # seLinuxOptions:
+  #   type: "spc_t"
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Configure the livecycle
+# Ref: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+lifecycle: {}
+  # preStop:
+  #   exec:
+  #     command: ["/bin/sh", "-c", "sleep 20"]
+
+# Configure the livenessProbe
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  httpGet:
+    path: /metrics
+    port: metrics
+  # initialDelaySeconds: 0
+  # periodSeconds: 10
+  # timeoutSeconds: 1
+  # successThreshold: 1
+  # failureThreshold: 3
+
+# Configure the readinessProbe
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+readinessProbe:
+  httpGet:
+    path: /metrics
+    port: metrics
+  # initialDelaySeconds: 0
+  # periodSeconds: 10
+  # timeoutSeconds: 1
+  # successThreshold: 1
+  # failureThreshold: 3
+
+resources: {}
+  # requests:
+  #   cpu: 10m
+  #   memory: 128Mi
+  # limits:
+  #   memory: 128Mi
+
+## only available if kind is Deployment
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+  ## see https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/#autoscaling-on-multiple-metrics-and-custom-metrics
+  customRules: []
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: packets-per-second
+    #     target:
+    #       type: AverageValue
+    #       averageValue: 1k
+  ## see https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-configurable-scaling-behavior
+  # behavior:
+  #   scaleDown:
+  #     policies:
+  #       - type: Pods
+  #         value: 4
+  #         periodSeconds: 60
+  #       - type: Percent
+  #         value: 10
+  #         periodSeconds: 60
+
+# priorityClassName: "system-node-critical"
+
+nodeSelector: {}
+
+## Node tolerations for server scheduling to nodes with taints
+## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+##
+tolerations: []
+# - key: null
+#   operator: Exists
+#   effect: "NoSchedule"
+
+## Affinity and anti-affinity
+## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+##
+affinity: {}
+
+## Annotations to be added to fluentd DaemonSet/Deployment
+##
+annotations: {}
+
+## Labels to be added to fluentd DaemonSet/Deployment
+##
+labels: {}
+
+## Annotations to be added to fluentd pods
+##
+podAnnotations: {}
+
+## Labels to be added to fluentd pods
+##
+podLabels: {}
+
+## How long (in seconds) a pods needs to be stable before progressing the deployment
+##
+minReadySeconds:
+
+## How long (in seconds) a pod may take to exit (useful with lifecycle hooks to ensure lb deregistration is done)
+##
+terminationGracePeriodSeconds:
+
+## Deployment strategy / DaemonSet updateStrategy
+##
+updateStrategy: {}
+#   type: RollingUpdate
+#   rollingUpdate:
+#     maxUnavailable: 1
+
+## Additional environment variables to set for fluentd pods
+env: 
+  - name: "FLUENTD_CONF"
+    value: "../../../etc/fluent/fluent.conf"
+  # - name: FLUENT_ELASTICSEARCH_HOST
+  #   value: "elasticsearch-master"
+  # - name: FLUENT_ELASTICSEARCH_PORT
+  #   value: "9200"
+
+envFrom: []
+
+initContainers: []
+
+## Name of the configMap containing a custom fluentd.conf configuration file to use instead of the default.
+# mainConfigMapNameOverride: ""
+
+## Name of the configMap containing files to be placed under /etc/fluent/config.d/
+## NOTE: This will replace ALL default files in the aforementioned path!
+# extraFilesConfigMapNameOverride: ""
+
+mountVarLogDirectory: true
+mountDockerContainersDirectory: true
+
+volumes: []
+
+volumeMounts: []
+
+## Only available if kind is StatefulSet
+## Fluentd persistence
+##
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+
+## Fluentd service
+##
+service:
+  enabled: true
+  type: "ClusterIP"
+  annotations: {}
+  # loadBalancerIP:
+  # externalTrafficPolicy: Local
+  ports: 
+   - name: "forwarder"
+     protocol: TCP
+     containerPort: 24224
+
+## Prometheus Monitoring
+##
+metrics:
+  serviceMonitor:
+    enabled: false
+    additionalLabels:
+      release: prometheus-operator
+    namespace: ""
+    namespaceSelector: {}
+    ## metric relabel configs to apply to samples before ingestion.
+    ##
+    metricRelabelings: []
+    # - sourceLabels: [__name__]
+    #   separator: ;
+    #   regex: ^fluentd_output_status_buffer_(oldest|newest)_.+
+    #   replacement: $1
+    #   action: drop
+    ## relabel configs to apply to samples after ingestion.
+    ##
+    relabelings: []
+    # - sourceLabels: [__meta_kubernetes_pod_node_name]
+    #   separator: ;
+    #   regex: ^(.*)$
+    #   targetLabel: nodename
+    #   replacement: $1
+    #   action: replace
+    ## Additional serviceMonitor config
+    ##
+    # jobLabel: fluentd
+    # scrapeInterval: 30s
+    # scrapeTimeout: 5s
+    # honorLabels: true
+
+  prometheusRule:
+    enabled: false
+    additionalLabels: {}
+    namespace: ""
+    rules: []
+    # - alert: FluentdDown
+    #   expr: up{job="fluentd"} == 0
+    #   for: 5m
+    #   labels:
+    #     context: fluentd
+    #     severity: warning
+    #   annotations:
+    #     summary: "Fluentd Down"
+    #     description: "{{ $labels.pod }} on {{ $labels.nodename }} is down"
+    # - alert: FluentdScrapeMissing
+    #   expr: absent(up{job="fluentd"} == 1)
+    #   for: 15m
+    #   labels:
+    #     context: fluentd
+    #     severity: warning
+    #   annotations:
+    #     summary: "Fluentd Scrape Missing"
+    #     description: "Fluentd instance has disappeared from Prometheus target discovery"
+
+## Grafana Monitoring Dashboard
+##
+dashboards:
+  enabled: "true"
+  namespace: ""
+  labels:
+    grafana_dashboard: '"1"'
+
+## Fluentd list of plugins to install
+##
+plugins:
+ - fluent-plugin-kafka
+#  - fluent-elasticsearch
+# - fluent-plugin-out-http
+
+## Add fluentd config files from K8s configMaps
+##
+configMapConfigs: []
+#  - fluentd-prometheus-conf
+#  - fluentd-systemd-conf
+
+## Fluentd configurations:
+##
+fileConfigs:
+  fluentd.conf: |-
+    <source>
+     @type forward
+     port 54321
+     bind 0.0.0.0
+    </source>
+    <source>
+      @type tail
+      path /var/run/cilium/tetragon/tetragon.log # 
+      tag tetragon
+      <parse>
+        @type json
+      </parse>
+    </source>
+    <label @OUTPUT>
+      # <filter tetragon>
+      #   @type record_transformer
+      #   enable_ruby true
+      #   <record>
+      #     hostname ${hostname}
+      #     pod_name ${record["k8s"]["pod_name"]}
+      #     namespace_name ${record["k8s"]["namespace_name"]}
+      #     container_name ${record["k8s"]["container_name"]}
+      #     labels ${record["k8s"]["labels"]}
+      #     annotations ${record["k8s"]["annotations"]}
+      #   </record>
+      # </filter>
+      <match *.**>
+        @type kafka2
+        brokers redpanda-src.redpanda.svc.cluster.local:9093
+        use_event_time true
+        <buffer topic>
+          @type file
+          path /buffer/td
+          flush_interval 3s
+        </buffer>
+        <format>
+          @type json
+        </format>
+        topic_key topic
+        default_topic cr1
+        required_acks -1
+        compression_codec gzip
+      </match>
+    </label>
+    # <match *.**>
+    #   @type kafka2
+
+    #   # list of seed brokers
+    #   brokers redpanda-src-0:9092
+    #   use_event_time true
+
+    #   # buffer settings
+    #   <buffer topic>
+    #   @type file
+    #     path /buffer/td
+    #     flush_interval 3s
+    #   </buffer>
+
+    #     # data type settings
+    #   <format>
+    #     @type json
+    #   </format>
+
+    #   # topic settings
+    #   topic_key topic
+    #   default_topic cr1
+
+    #   # producer settings
+    #   required_acks -1
+    #   compression_codec gzip
+    # </match>
+  04_outputs.conf: |-
+
+
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    # - host: fluentd.example.tld
+    - port: 9880
+
+  tls: []
+  # - secretName: fluentd-tls
+  #   hosts:
+  #     - fluentd.example.tld

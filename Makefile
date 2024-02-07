@@ -38,12 +38,12 @@ redpanda:
 	-$(HELM) repo add jetstack https://charts.jetstack.io
 	-$(HELM) repo update
 	-$(HELM) upgrade --install cert-manager jetstack/cert-manager --set installCRDs=true --namespace cert-manager  --create-namespace
-	- kubectl kustomize "https://github.com/redpanda-data/redpanda-operator//src/go/k8s/config/crd?ref=v2.1.14-23.3.4" \
-    | kubectl apply -f -
 	-$(HELM) repo add redpanda https://charts.redpanda.com
 	-$(HELM) repo update
-	-$(HELM) upgrade --install redpanda-src redpanda/redpanda -n redpanda --create-namespace --set "statefulset.replicas=1" --set "external.enabled=false"
-	- kubectl --namespace redpanda rollout status --watch deployment/redpanda-controller-operator
+	-$(HELM) upgrade --install redpanda-src redpanda/redpanda -n redpanda --create-namespace --values redpanda/values.yaml
+#kubectl exec -it -n redpanda redpanda-src-0 -c redpanda -- /bin/bash 
+# rpk topic create cr1 | echo "hi" | rpk topic produce cr1
+#-watch -n 1 kubectl get all -A -o wide --field-selector=metadata.namespace=redpanda
 
 #export REDPANDA_BROKERS=localhost:19092
 #for i in {1..60}; do echo $(cat /dev/urandom | head -c10 | base64) | rpk topic produce telemetryB; sleep 1; done
@@ -52,7 +52,7 @@ redpanda:
 fluent:
 	-$(HELM) repo add fluent https://fluent.github.io/helm-charts
 	-$(HELM) repo update
-	-$(HELM) upgrade -- install fluentd fluent/fluentd -n kube-system --create-namespace --values fluentd/values.yaml
+	-$(HELM) upgrade --install fluentd fluent/fluentd -n redpanda --create-namespace --values fluentd/values.yaml
 
 
 .PHONY: spyder
@@ -71,8 +71,14 @@ spyder:
 tetragon-install: helm
 	-$(HELM) repo add cilium https://helm.cilium.io
 	-$(HELM) repo update
-	-$(HELM) upgrade --install tetragon cilium/tetragon -n kube-system
+	-$(HELM) upgrade --install tetragon cilium/tetragon -n kube-system --set tetragon.grpc.enabled=true --set tetragon.grpc.address=localhost:54321
 	kubectl -n kube-system wait --for=condition=Ready pod  -l app.kubernetes.io/name=tetragon
+
+
+.PHONY: vector
+	-$(HELM) repo add vector https://helm.vector.dev
+	- wget https://github.com/seifrajhi/tetragon-vector-parseable-blog/blob/main/vector-tetragon-values.yaml
+	-$(HELM) install vector vector/vector --namespace vector --create-namespace --values vector-tetragon-values.yaml
 
 .PHONY: traces
 traces:
