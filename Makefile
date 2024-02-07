@@ -84,6 +84,10 @@ tetragon-install: helm
 vector:
 	-$(HELM) repo add vector https://helm.vector.dev
 	-$(HELM) upgrade --install vector vector/vector --namespace vector --create-namespace --values vector/values.yaml
+	-$(HELM) repo add parseable https://charts.parseable.com
+	-$(HELM) upgrade --install parseable parseable/parseable -n parseable --set "parseable.local=true" --create-namespace
+	-kubectl create secret generic parseable-env-secret --from-env-file=parseable-env-secret -n parseable
+    #kubectl port-forward svc/parseable 8000:80 -n parseable
 
 .PHONY: traces
 traces:

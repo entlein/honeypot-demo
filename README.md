@@ -31,6 +31,9 @@ Create redpanda
 ```bash
 make redpanda fluent
 ```
+
+For Clickhouse, UI is this http://dash.tabix.io/signin  , so first need port-fwd
+
 Go to second shell for STDOUT observations (dont kill this shell)
 ```bash
 make secondshell-on
