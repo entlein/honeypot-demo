@@ -53,6 +53,15 @@ clickhouse:
 	-$(HELM) upgrade --install clickhouse -n clickhouse --create-namespace oci://registry-1.docker.io/bitnamicharts/clickhouse --values clickhouse/values.yaml
 
 
+.PHONY: spark
+spark:
+	-$(HELM) repo add bitnami https://charts.bitnami.com/bitnami
+	-$(HELM) repo update
+	-$(HELM) upgrade --install spark -n spark oci://registry-1.docker.io/bitnamicharts/spark --create-namespace --values spark/values.yaml
+	-$(HELM) repo add jupyterhub https://jupyterhub.github.io/helm-chart/
+	-$(HELM) repo update
+	-$(HELM) upgrade --install jupyterhub jupyterhub/jupyterhub --namespace jupyter --create-namespace  --values jupyterhub/values.yaml
+
 .PHONY: fluent 
 fluent:
 	-$(HELM) repo add fluent https://fluent.github.io/helm-charts
@@ -86,7 +95,7 @@ vector:
 	-$(HELM) upgrade --install vector vector/vector --namespace vector --create-namespace --values vector/values.yaml
 	-$(HELM) repo add parseable https://charts.parseable.com
 	-$(HELM) upgrade --install parseable parseable/parseable -n parseable --set "parseable.local=true" --create-namespace
-	-kubectl create secret generic parseable-env-secret --from-env-file=parseable-env-secret -n parseable
+	-kubectl create secret generic parseable-env-secret --from-env-file=parseable/parseable-env-secret -n parseable
     #kubectl port-forward svc/parseable 8000:80 -n parseable
 
 .PHONY: traces
