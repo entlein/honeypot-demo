@@ -323,20 +323,6 @@ customConfig:
         enabled: true
         path: 'http://parseable.parseable.svc.cluster.local/api/v1/liveness'
         port: 80
-    clickhouse: 
-      type: clickhouse
-      endpoint: "http://clickhouse-headless.clickhouse.svc.cluster.local:8123"
-      inputs: 
-        - modify
-      database: "KAFKA"
-      table: "cr1"
-      skip_unknown_fields: true
-      auth:
-        strategy: "basic"
-        user: "default"
-        password: "admin"
-
-
 
     
 
