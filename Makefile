@@ -9,7 +9,7 @@ ARCH := $(shell uname -m | sed 's/x86_64/amd64/')
 ##@ Kind
 
 .PHONY: all-up
-all-up: cluster-up tetragon-install ssh-install rbac sc-deploy  port-forward ## Create the kind cluster and deploy tetragon
+all-up: cluster-up tetragon-install redpanda fluent spark vector ssh-install rbac sc-deploy  port-forward ## Create the kind cluster and deploy tetragon
 
 .PHONY: detect-on
 detect-on: traces
@@ -48,9 +48,6 @@ redpanda:
 #export REDPANDA_BROKERS=localhost:19092
 #for i in {1..60}; do echo $(cat /dev/urandom | head -c10 | base64) | rpk topic produce telemetryB; sleep 1; done
 
-.PHONY: clickhouse
-clickhouse:
-	-$(HELM) upgrade --install clickhouse -n clickhouse --create-namespace oci://registry-1.docker.io/bitnamicharts/clickhouse --values clickhouse/values.yaml
 
 
 .PHONY: spark
@@ -61,6 +58,7 @@ spark:
 	-$(HELM) repo add jupyterhub https://jupyterhub.github.io/helm-chart/
 	-$(HELM) repo update
 	-$(HELM) upgrade --install jupyterhub jupyterhub/jupyterhub --namespace jupyter --create-namespace  --values jupyterhub/values.yaml
+	-echo "JHUB user/pass is yours to freely choose"
 
 .PHONY: fluent 
 fluent:
@@ -68,7 +66,7 @@ fluent:
 	-$(HELM) repo update
 	-$(HELM) upgrade --install fluentd fluent/fluentd -n redpanda --create-namespace --values fluentd/values.yaml
 
-
+# This is only for CR cause the Registration Code wont work for anyone else
 .PHONY: spyder
 spyder:
 	-helm repo add nanoagent https://spyderbat.github.io/nanoagent_helm/
@@ -95,7 +93,7 @@ vector:
 	-$(HELM) upgrade --install vector vector/vector --namespace vector --create-namespace --values vector/values.yaml
 	-$(HELM) repo add parseable https://charts.parseable.com
 	-$(HELM) upgrade --install parseable parseable/parseable -n parseable --set "parseable.local=true" --create-namespace
-	-kubectl create secret generic parseable-env-secret --from-env-file=parseable/parseable-env-secret -n parseable
+	-kubectl create secret generic parseable-env-secret --from-env-file=parseable/parseable-env-secret -n parseable || echo "pass"
     #kubectl port-forward svc/parseable 8000:80 -n parseable
 
 .PHONY: traces
